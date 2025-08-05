@@ -4,6 +4,7 @@ source("functions.R")
 library(mlr3verse)
 library(mlr3proba)
 library(dplyr)
+library(mlr3learners) 
 
 # Preprocessing ####
 
@@ -57,5 +58,52 @@ pred <- lrn_cox$predict_newdata(test)
 pred_save(lrn_cox, test, running_number = "cox2")
 
 
+## Different learners ####
 
+surv_learners = c(
+  "surv.akritas",
+  "surv.aorsf",
+  "surv.blackboost",
+  "surv.cforest",
+  "surv.coxboost",
+  "surv.coxph",
+  "surv.coxtime",
+  "surv.ctree",
+  "surv.cv_coxboost",
+  "surv.cv_glmnet",
+  "surv.deephit",
+  "surv.deepsurv",
+  "surv.dnnsurv",
+  "surv.flexible",
+  "surv.gamboost",
+  "surv.gbm",
+  "surv.glmboost",
+  "surv.glmnet",
+  "surv.kaplan",
+  "surv.loghaz",
+  "surv.mboost",
+  "surv.nelson",
+  "surv.obliqueRSF",
+  "surv.parametric",
+  "surv.pchazard",
+  "surv.penalized",
+  "surv.ranger",
+  "surv.rfsrc",
+  "surv.rpart",
+  "surv.svm",
+  "surv.xgboost"
+)
+
+surv_learners
+
+lst_lrns_proba <- lapply(surv_learners, function(l) {
+  cat("Trainiere:", l, "\n")
+  learner <- lrn(l)
+  learner$train(data_complete)
+  
+  pred <- learner$predict_newdata(test)
+  pred_save(learner, test, running_number = l)
+  
+  list(learner = learner, pred = pred)
+})
 
