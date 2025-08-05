@@ -1,9 +1,12 @@
 
 source("functions.R")
+# remotes::install_github("mlr-org/mlr3tuning@v1.3.0")  # for tuning when we get to that 
 
 library(mlr3verse)
 library(mlr3proba)
+library(mlr3pipelines)
 library(dplyr)
+library(tidyverse)
 
 # Preprocessing ####
 
@@ -58,4 +61,57 @@ pred_save(lrn_cox, test, running_number = "cox2")
 
 
 
+## NA stragegy ####
+
+dummy_cols <- grep("___", names(data_df), value = TRUE)
+prefixes  <- unique(sub("___.*$", "", dummy_cols))
+
+data_df <- data_df %>%
+  # find all dummy columns (they all have "___" in their name)
+  { . } %>%
+  { 
+    # for each prefix, create the collapsed column, then drop the dummies
+    out <- .
+    for(prefix in prefixes) {
+      cols <- grep(paste0("^", prefix, "___"), names(out), value = TRUE)
+      
+      # create new integer column: the suffix of the one-hot that's 1
+      out[[prefix]] <- apply(out[cols], 1, function(r) {
+        i <- which(r == 1L)
+        if (length(i) == 1L) {
+          as.integer(sub("^.*___", "", cols[i]))
+        } else {
+          NA_integer_
+        }
+      })
+      
+      # drop the old dummy columns
+      out <- select(out, -all_of(cols))
+    }
+    out
+  }
+
+data_na <- as_task_surv(x = data_df,
+                          time = "surv_icu0to60",
+                          event = "surv_icu_death",
+                          type = "right")
+
+data_na$select(setdiff(data_na$feature_names, c(setdiff_exclude, "CombinedID")))
+
+
+graph = po("imputesample") %>>% lrn_logreg
+graph$plot(horizontal = TRUE)
+
+
+data_na$missings()
+
+graph_na <- po("imputelearner", lrn("regr.rpart")) %>>% lrn("surv.coxph")
+graph_na <- po("imputelearner") %>>% lrn("surv.coxph")
+
+graph_na2 <- as_learner(po("imputesample") %>>% lrn("surv.coxph"))
+res <- graph_na2$train(data_na)
+graph_na2$predict_newdata(test)
+graph_na$train(data_na)
+
+pred_save(graph_na, test, running_number = "cox_na_samples")
 
