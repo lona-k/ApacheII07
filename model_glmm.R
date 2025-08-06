@@ -109,37 +109,55 @@ setdiff_exclude <- setdiff(colnames(data_df), colnames(test))
 features_icu_no_na <- setdiff(colnames(data_icu), c(any_na, setdiff_exclude, "CombinedID", "Year", "CombinedicuID"))
 features_icu_na <- setdiff(colnames(data_icu), c(setdiff_exclude, "CombinedID", "Year", "CombinedicuID"))
 
-
 # Lasso model #### 
-
-
 
 
 # GLMM ####
 
 # baseline
 vars <- paste0(features_icu_no_na, collapse = " + ")
-form_cox <- as.formula(sprintf("Surv(surv_icu0to60, surv_icu_death) ~  frailty(CombinedicuID) + as.numeric(as.character(Year))"))
-frail_cox <- coxph(
+form_cox <- as.formula("Surv(surv_icu0to60, surv_icu_death) ~  frailty(CombinedicuID) + as.numeric(as.character(Year))")
+cox_glmm_base <- coxph(
   form_cox,
   # form_cox,
   data = data_icu
 )
 
-pred_save(frail_cox, test, running_number = "cox_icu_simple2", preds = predict(frail_cox, newdata = test_icu, type = "risk"))
+pred_save(cox_glmm_base, test_icu, running_number = "cox_icu_simple3")
 
 # all no NA
 vars <- paste0(features_icu_no_na, collapse = " + ")
 form_cox <- as.formula(sprintf("Surv(surv_icu0to60, surv_icu_death) ~ %s + frailty(CombinedicuID) + as.numeric(as.character(Year))", vars))
-frail_cox <- coxph(
+cox_glmm_all <- coxph(
   form_cox,
   # form_cox,
   data = data_icu
 )
 
-pred_save(frail_cox, test, running_number = "cox_icu_all_no_na", preds = predict(frail_cox, newdata = test_icu, type = "risk"))
+pred_save(cox_glmm_all, test_icu, running_number = "cox_icu_all_no_na")
+
+# lasso -> mgcv
+
+# GAM + RI
+library(mgcv)
+numeric_vars <- features_icu_no_na[
+  sapply(data_icu[ , features_icu_no_na], is.numeric)
+]
+
+form_fact_vars <- paste0(setdiff(features_icu_no_na, numeric_vars), collapse = " + ")
+form_splines <- paste(paste0("s(", numeric_vars, ", bs = \"ps\")"), collapse = " + ")
+
+form_gam_pen <- as.formula(sprintf("surv_icu0to60 ~ %s + %s", form_fact_vars, form_splines))
+form_gam_pen <- update(form_gam_pen, . ~ . + s(CombinedicuID, bs = "re"))
+cox_gam_splines <- gam(form_gam_pen, data = data_icu, method = "REML", family = "cox.ph", weights = surv_icu_death)
+
+
+# GAM + RI + penalization
+
 
 # multiple imputation
+
+
 
 ## .####
 surv_learners = c(
