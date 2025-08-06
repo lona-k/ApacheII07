@@ -1,6 +1,5 @@
-
 source("functions.R")
-# remotes::install_github("mlr-org/mlr3tuning@v1.3.0") # do this on windows!!
+remotes::install_github("mlr-org/mlr3tuning@v1.3.0") # do this on windows!!
 library(mlr3verse)
 library(mlr3proba)
 library(mlr3pipelines)
@@ -35,34 +34,18 @@ setdiff_exclude <- setdiff(colnames(data_df), colnames(test))
 # impute_features <- c("Surv0To60", "Disc0To60", "sistersite", "admission_type", "DiagID")
 
 data <- as_task_surv(x = data_df,
-                      time = "surv_icu0to60",
-                      event = "surv_icu_death",
-                      type = "right")
-
-
-# Death vs. no Death ####
-
-## baseline model ####
-
-data_full <- as_task_surv(x = data_df,
                      time = "surv_icu0to60",
                      event = "surv_icu_death",
                      type = "right")
 
+data_full <- as_task_surv(x = data_df,
+                          time = "surv_icu0to60",
+                          event = "surv_icu_death",
+                          type = "right")
+
 data_complete <- data_full$clone(deep = TRUE)
 data_complete$select(setdiff(data_complete$feature_names, c(any_na, setdiff_exclude, "CombinedID")))
 
-# cv_10 <- rsmp("cv", folds = 10)
-lrn_cox <- lrn("surv.coxph")
-lrn_cox$train(data_complete)
-
-pred <- lrn_cox$predict_newdata(test)
-pred_save(lrn_cox, test, running_number = "cox2")
-
-
-## Different learners ####
-
-## NA stragegy ####
 
 dummy_cols <- grep("___", names(data_df), value = TRUE)
 prefixes  <- unique(sub("___.*$", "", dummy_cols))
@@ -118,63 +101,49 @@ test <- test %>%
   }
 
 data_na <- as_task_surv(x = data_df,
-                          time = "surv_icu0to60",
-                          event = "surv_icu_death",
-                          type = "right")
+                        time = "surv_icu0to60",
+                        event = "surv_icu_death",
+                        type = "right")
 
 data_na$select(setdiff(data_na$feature_names, c(setdiff_exclude, "CombinedID")))
 
-# 
-# graph = po("imputesample") %>>% lrn_logreg
-# graph$plot(horizontal = TRUE)
-# 
-# 
-# data_na$missings()
-# 
-# graph_na <- po("imputelearner", lrn("regr.rpart")) %>>% lrn("surv.coxph")
-# graph_na <- po("imputelearner") %>>% lrn("surv.coxph")
-# 
-# graph_na2 <- as_learner(po("imputesample") %>>% lrn("surv.coxph"))
-# res <- graph_na2$train(data_na)
-# graph_na2$predict_newdata(test)
-# graph_na$train(data_na)
-# 
-# pred_save(graph_na, test, running_number = "cox_na_samples")
 
-## all extralearners learners ####
 
+# TODO: LEARNER #### (kopieren)
+
+# mögliche learner
 surv_learners = c(
   "surv.akritas",
   "surv.aorsf",
   "surv.blackboost",
-  "surv.cforest",
-  "surv.coxboost",
+  "surv.cforest", #
+  "surv.coxboost", #
   "surv.coxph",
   "surv.coxtime",
   "surv.ctree",
-  "surv.cv_coxboost",
+  "surv.cv_coxboost", #
   "surv.cv_glmnet",
   "surv.deephit",
-  "surv.deepsurv",
+  "surv.deepsurv", #
   "surv.dnnsurv",
-  "surv.flexible",
+  "surv.flexible", #
   "surv.gamboost",
-  "surv.gbm",
+  "surv.gbm", #
   "surv.glmboost",
   "surv.glmnet",
   "surv.kaplan",
   "surv.loghaz",
-  "surv.mboost",
+  "surv.mboost", #
   "surv.nelson",
   "surv.obliqueRSF",
-  "surv.parametric",
-  "surv.pchazard",
+  "surv.parametric", #
+  "surv.pchazard", #
   "surv.penalized",
-  "surv.ranger",
+  "surv.ranger", # 
   "surv.rfsrc",
   "surv.rpart",
   "surv.svm",
-  "surv.xgboost"
+  "surv.xgboost" #
 )
 
 surv_learners
@@ -193,6 +162,7 @@ surv_learners
 
 
 # HPO loop ####
+# Kopieren!! + learner eintragen
 
 l <- "surv.rpart" # TODO: specify surv learner
 learner <- lrn(l)
