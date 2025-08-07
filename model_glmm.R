@@ -112,10 +112,39 @@ features_icu_na <- setdiff(colnames(data_icu), c(setdiff_exclude, "CombinedID", 
 
 # Lasso model #### 
 
+# XGboost
+library(xgboost)
+library(dplyr)
+library(caret)
+library(mlexperiments)
+library(mlsurvlrnrs)
+library(data.table)
+library(mice)
+
+all_cols <- c("surv_icu0to60", "surv_icu_death", features_icu_no_na)
+all_cols
+complete_idx <- complete.cases(data_icu[, all_cols])
+complete_idx
+
+df_cox <- data_icu[complete_idx, all_cols]
+
+features <- features_icu_no_na
+
+time_icu  <- data_icu$surv_icu0to60
+event_icu <- data_icu$surv_icu_death
+
+X_icu <- model.matrix(~ . -1, data = data_icu[, features, with = FALSE])
+
+cat("Rows in X_icu:    ", nrow(X_icu), "\n")
+cat("Length of time_icu:", length(time_icu), "\n")
+cat("Length of event_icu:", length(event_icu), "\n")
+params <- list(set.seed = 1502, eval_metric = "auc", objective = "binary:logistic")
 
 
+model <- xgboost(data = X_icu, label = event_icu, params = params, nrounds = 20, verbose = 1)
 
-# GLMM ####
+
+## GLMM ####
 
 # baseline
 vars <- paste0(features_icu_no_na, collapse = " + ")

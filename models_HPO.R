@@ -159,8 +159,6 @@ surv_learners
 #   list(learner = learner, pred = pred)
 # })
 
-
-
 # HPO loop ####
 # Kopieren!! + learner eintragen
 
@@ -207,7 +205,7 @@ instance$result$learner_param_vals
 lrn_tuned = lrn(l)
 lrn_tuned$param_set$values = instance$result_learner_param_vals
 lrn_tuned$train(data_complete)
-# pred <- tuned_lrn$predict_newdata(test)
+pred <- tuned_lrn$predict_newdata(test)
 pred_save(lrn_tuned, test, running_number = sprintf("hpo_%s", l))
 
 
